@@ -1,6 +1,8 @@
 // scripts/build-catalog.js
 //
-// Scrapes sportslogos.net team pages into data/catalog.json.
+// Scrapes sportslogos.net team pages into public/data/catalog.json.
+// Lives under public/ so Vite serves it statically and the game can
+// fetch('/data/catalog.json') at runtime for typeahead options.
 // Run this occasionally (not daily) — it's the master pool that
 // pick-daily.js samples from. Uses Playwright.
 //
@@ -25,12 +27,13 @@
 // individual logo pages / Timeline links was needed.
 
 import { chromium } from 'playwright';
+import { createWorker } from 'tesseract.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const OUTPUT_PATH = path.join(__dirname, '..', 'data', 'catalog.json');
+const OUTPUT_PATH = path.join(__dirname, '..', 'public', 'data', 'catalog.json');
 
 const USER_AGENT =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
@@ -123,6 +126,85 @@ function slugify(str) {
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// --- Text-in-logo filter ------------------------------------------------
+// A guessing game can't use a logo that spells out its own answer. Whole
+// "Wordmark" sections are already excluded by classifySection(), but plenty
+// of Primary/Secondary/Alternate marks (seals, badges, script logos) also
+// bake the team name or nickname into the artwork itself. There's no DOM
+// signal for this — it has to be read off the actual image — so this runs
+// OCR (tesseract.js) against every candidate logo thumbnail and drops any
+// where the recognized text contains a real match for the team or nickname.
+//
+// OCR on small/stylized sports-logo thumbnails is inherently imperfect:
+// curved or heavily stylized text is often misread, so this will miss some
+// text logos (false negatives) — clean, boxy lettering (e.g. "BENGALS") is
+// reliably caught, garbled/curved script often isn't. It should be treated
+// as a real reduction in text-logo contamination, not a guarantee of zero.
+const OCR_STOPWORDS = new Set([
+  'city', 'state', 'united', 'club', 'the', 'of', 'and', 'football', 'baseball',
+  'basketball', 'hockey', 'team', 'est', 'since',
+]);
+
+function ocrTargetWords(team, nickname) {
+  return [...team.split(' '), ...nickname.split(' ')]
+    .map((w) => w.toLowerCase().replace(/[^a-z0-9]/g, ''))
+    .filter((w) => w.length >= 4 && !OCR_STOPWORDS.has(w));
+}
+
+function ocrTextMatchesTeam(ocrText, targetWords) {
+  if (targetWords.length === 0) return false;
+  const tokens = ocrText.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  return targetWords.some((w) => tokens.includes(w));
+}
+
+async function filterTextLogos(catalog) {
+  console.log('\nRunning OCR text-in-logo filter (this can take a while)...');
+  const worker = await createWorker('eng');
+  let scanned = 0;
+  let removed = 0;
+
+  for (const entry of catalog) {
+    const targetWords = ocrTargetWords(entry.team, entry.nickname);
+    const kept = [];
+    const flagged = [];
+    for (const logo of entry.logos) {
+      scanned++;
+      try {
+        const res = await fetch(logo.url);
+        const buf = Buffer.from(await res.arrayBuffer());
+        const { data } = await worker.recognize(buf);
+        if (ocrTextMatchesTeam(data.text, targetWords)) {
+          flagged.push(logo);
+          continue;
+        }
+      } catch (e) {
+        console.warn(`  ! OCR failed on ${logo.url}: ${e.message} — keeping logo`);
+      }
+      kept.push(logo);
+    }
+
+    // Never let this filter zero out a team entirely — if every single logo
+    // got flagged, that's much more likely a systematic OCR misread (e.g. an
+    // icon's shape getting read as letters) than a team that genuinely has
+    // no usable identity mark. Keep the originals and flag for human review
+    // instead of silently dropping the team from the catalog.
+    if (kept.length === 0 && flagged.length > 0) {
+      console.warn(`  ? ${entry.team} ${entry.nickname}: OCR flagged ALL ${flagged.length} logo(s) as text — keeping them, needs manual review`);
+      entry.logos = flagged;
+    } else {
+      for (const logo of flagged) {
+        removed++;
+        console.log(`  [text logo removed] ${entry.team} ${entry.nickname} (${logo.type}, ${logo.era})`);
+      }
+      entry.logos = kept;
+    }
+  }
+
+  await worker.terminate();
+  console.log(`OCR filter done: scanned ${scanned} logos, removed ${removed} text logos.`);
+  return catalog.filter((entry) => entry.logos.length > 0);
 }
 
 // Collects the set of every raw section title seen, across all teams/leagues
@@ -234,9 +316,11 @@ async function run() {
     }
   }
 
+  const filteredCatalog = await filterTextLogos(catalog);
+
   fs.mkdirSync(path.dirname(OUTPUT_PATH), { recursive: true });
-  fs.writeFileSync(OUTPUT_PATH, JSON.stringify(catalog, null, 2));
-  console.log(`\nWrote ${catalog.length} teams to ${OUTPUT_PATH}`);
+  fs.writeFileSync(OUTPUT_PATH, JSON.stringify(filteredCatalog, null, 2));
+  console.log(`\nWrote ${filteredCatalog.length} teams to ${OUTPUT_PATH}`);
 
   console.log('\nAll section titles seen this run (verify classifySection() still catches everything intended):');
   for (const title of [...seenSectionTitles].sort()) {

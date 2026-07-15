@@ -1,8 +1,10 @@
 // scripts/pick-daily.js
 //
-// Run daily via cron / GitHub Action. Reads data/catalog.json (built by
-// build-catalog.js) and data/used-log.json (rolling history), and writes
-// data/daily-puzzle-{date}.json with all 5 difficulty tiers for the day.
+// Run daily via cron / GitHub Action. Reads public/data/catalog.json (built
+// by build-catalog.js) and public/data/used-log.json (rolling history), and
+// writes public/data/daily-puzzle-{date}.json with all 5 difficulty tiers
+// for the day. Lives under public/ so Vite serves it statically and the
+// game can fetch(`/data/daily-puzzle-${today}.json`) at runtime.
 //
 // USAGE:
 //   node scripts/pick-daily.js
@@ -12,16 +14,20 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = path.join(__dirname, '..', 'data');
+const DATA_DIR = path.join(__dirname, '..', 'public', 'data');
 const COOLDOWN_DAYS = 14;
 const DAILY_COUNT = 10; // matches ROUNDS.length in the game
 
+// logoTypes: null = any type in the catalog; otherwise a whitelist of
+// catalog `logo.type` values ('primary' or 'secondary' — note the scraper
+// already folds sportslogos.net's "Alternate" sections into 'secondary',
+// so 'secondary' here covers both secondary AND alternate marks).
 const TIERS = {
-  EASY:   { leagues: ['NFL', 'NBA', 'MLB', 'NHL'], primaryOnly: true },
-  MEDIUM: { leagues: ['NFL', 'NBA', 'MLB', 'NHL', 'NCAA'], primaryOnly: false },
-  HARD:   { leagues: ['NFL', 'NBA', 'MLB', 'NHL', 'NCAA', 'EPL', 'Bundesliga', 'Serie A', 'La Liga', 'WNBA'], primaryOnly: false },
-  EXPERT: { leagues: ['NFL', 'NBA', 'MLB', 'NHL', 'NCAA', 'EPL', 'Bundesliga', 'Serie A', 'La Liga', 'WNBA', 'AHL', 'International League', 'Pacific Coast League'], primaryOnly: false },
-  SICKO:  { leagues: null, primaryOnly: false }, // null = every league in the catalog
+  EASY:   { leagues: ['NFL', 'NBA', 'MLB', 'NHL'], logoTypes: ['primary'] },
+  MEDIUM: { leagues: ['NFL', 'NBA', 'MLB', 'NHL', 'NCAA'], logoTypes: null },
+  HARD:   { leagues: ['NFL', 'NBA', 'MLB', 'NHL', 'NCAA', 'EPL', 'Bundesliga', 'Serie A', 'La Liga', 'WNBA', 'PWHL'], logoTypes: null },
+  EXPERT: { leagues: ['NFL', 'NBA', 'MLB', 'NHL', 'NCAA', 'EPL', 'Bundesliga', 'Serie A', 'La Liga', 'WNBA', 'PWHL', 'AHL', 'International League', 'Pacific Coast League', 'KHL', 'ECHL', 'SPHL', 'CFL'], logoTypes: ['secondary'] },
+  SICKO:  { leagues: null, logoTypes: ['secondary'] }, // null = every league in the catalog
 };
 const TIER_ORDER = ['EASY', 'MEDIUM', 'HARD', 'EXPERT', 'SICKO'];
 
@@ -43,23 +49,34 @@ function daysAgo(dateStr) {
   return (Date.now() - new Date(dateStr).getTime()) / 86400000;
 }
 
-function pickLogoForTeam(team, primaryOnly) {
-  const pool = primaryOnly ? team.logos.filter((l) => l.type === 'primary') : team.logos;
-  const usable = pool.length ? pool : team.logos; // fallback if a team has no primary tagged
-  return usable[Math.floor(Math.random() * usable.length)];
+function logoPoolFor(team, logoTypes) {
+  return logoTypes ? team.logos.filter((l) => logoTypes.includes(l.type)) : team.logos;
+}
+
+function pickLogoForTeam(team, logoTypes) {
+  const pool = logoPoolFor(team, logoTypes);
+  return pool[Math.floor(Math.random() * pool.length)];
 }
 
 function pickTier(catalog, cooldownIds, excludeIds, tierConfig) {
+  // A team is only eligible if it actually has a logo matching this tier's
+  // required type(s) — e.g. a team with zero secondary/alternate logos on
+  // file can't be picked for EXPERT/SICKO, rather than silently falling
+  // back to showing its primary logo there.
+  const hasEligibleLogo = (t) => logoPoolFor(t, tierConfig.logoTypes).length > 0;
+
   let eligible = catalog.filter((t) =>
     !cooldownIds.has(t.id) &&
     !excludeIds.has(t.id) &&
-    (tierConfig.leagues === null || tierConfig.leagues.includes(t.league))
+    (tierConfig.leagues === null || tierConfig.leagues.includes(t.league)) &&
+    hasEligibleLogo(t)
   );
 
   if (eligible.length < DAILY_COUNT) {
     eligible = catalog.filter((t) =>
       !excludeIds.has(t.id) &&
-      (tierConfig.leagues === null || tierConfig.leagues.includes(t.league))
+      (tierConfig.leagues === null || tierConfig.leagues.includes(t.league)) &&
+      hasEligibleLogo(t)
     );
     console.warn(`[pick-daily] cooldown relaxed for a tier — pool was under ${DAILY_COUNT}`);
   }
@@ -109,7 +126,7 @@ function run() {
     teams.forEach((t) => excludeIds.add(t.id));
 
     output[tierName] = teams.map((team) => {
-      const logo = pickLogoForTeam(team, TIERS[tierName].primaryOnly);
+      const logo = pickLogoForTeam(team, TIERS[tierName].logoTypes);
       return {
         id: team.id,
         team: team.team,

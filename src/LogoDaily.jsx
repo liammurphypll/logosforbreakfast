@@ -3,52 +3,18 @@ import { Check, X, Flame, ArrowRight, RotateCcw, Minus, Share2, Trophy, ChevronL
 import { supabase } from './supabaseClient.js';
 
 /* ---------------------------------------------------------------
-   MOCK DATA — swap ROUNDS with your scraped sportslogos.net set.
-   Each round just needs { team, nickname, league }. The framed
-   monogram below is a PLACEHOLDER — replace <Crest/> with
-   <img src=.../> once the scraper is feeding real logo files.
+   REAL DATA — fetched at runtime from public/data/ (see build-catalog.js
+   and pick-daily.js). Each round is { team, nickname, league, logo:
+   { url, type, era } }. catalog.json (the full team pool, all leagues)
+   feeds the typeahead's decoy options; daily-puzzle-{date}.json is
+   today's 5 difficulty tiers of 10 rounds each.
 ----------------------------------------------------------------- */
-const ROUNDS = [
-  { team: 'Kansas City', nickname: 'Chiefs', league: 'NFL', primary: '#E31837', secondary: '#FFB612', mono: 'KC' },
-  { team: 'Golden State', nickname: 'Warriors', league: 'NBA', primary: '#1D428A', secondary: '#FFC72C', mono: 'GS' },
-  { team: 'Carolina', nickname: 'Chaos', league: 'PLL', primary: '#0B7C3E', secondary: '#F2F1EC', mono: 'CC' },
-  { team: 'Toronto', nickname: 'Maple Leafs', league: 'NHL', primary: '#00205B', secondary: '#F2F1EC', mono: 'TML' },
-  { team: 'New York', nickname: 'Yankees', league: 'MLB', primary: '#0C2340', secondary: '#C4CED4', mono: 'NY' },
-  { team: 'Manchester', nickname: 'United', league: 'EPL', primary: '#DA020E', secondary: '#FBE122', mono: 'MU' },
-  { team: 'Green Bay', nickname: 'Packers', league: 'NFL', primary: '#203731', secondary: '#FFB612', mono: 'GB' },
-  { team: 'Boston', nickname: 'Celtics', league: 'NBA', primary: '#007A33', secondary: '#BA9653', mono: 'BC' },
-  { team: 'Chicago', nickname: 'Cubs', league: 'MLB', primary: '#0E3386', secondary: '#CC3433', mono: 'CC' },
-  { team: 'Montreal', nickname: 'Canadiens', league: 'NHL', primary: '#AF1E2D', secondary: '#192168', mono: 'MC' },
-];
+const DATA_BASE = '/data';
+const DAILY_COUNT = 10; // matches DAILY_COUNT in pick-daily.js
 
 const GAME_NAME = 'Logos for Breakfast';
 const PUZZLE_NO = 214;
-const PUZZLE_DATE = 'July 15, 2026';
 const DIFFICULTIES = ['EASY', 'MEDIUM', 'HARD', 'EXPERT', 'SICKO'];
-
-// Decoy pools so the typeahead has multiple live matches per keystroke —
-// swap in your real scraped catalog (hundreds of names) in production.
-const DECOY_TEAMS = [
-  'Kansas City', 'Kansas', 'Kalamazoo', 'Kane County',
-  'Golden State', 'Golden Valley', 'Green Bay', 'Georgia',
-  'Carolina', 'Charlotte', 'Chicago', 'Cincinnati', 'Cleveland', 'Columbus',
-  'Toronto', 'Tampa Bay', 'Tennessee', 'Texas',
-  'New York', 'New Orleans', 'New England', 'Nashville',
-  'Manchester', 'Miami', 'Milwaukee', 'Minnesota', 'Montreal',
-];
-const DECOY_NICKNAMES = [
-  'Chiefs', 'Chargers', 'Chaos', 'Chrome',
-  'Warriors', 'Wizards', 'Wild', 'Whipsnakes',
-  'Maple Leafs', 'Mets', 'Mavericks', 'Marlins',
-  'Yankees', 'Yellow Jackets',
-  'United', 'Union', 'Utd Rovers',
-  'Redwoods', 'Rangers', 'Ravens', 'Red Bulls',
-];
-const DECOY_LEAGUES = ['NFL', 'NBA', 'NHL', 'MLB', 'PLL', 'NLL', 'EPL', 'MLS', 'NCAA', 'WNBA'];
-
-const ALL_TEAMS = [...new Set([...ROUNDS.map(r => r.team), ...DECOY_TEAMS])];
-const ALL_NICKNAMES = [...new Set([...ROUNDS.map(r => r.nickname), ...DECOY_NICKNAMES])];
-const ALL_LEAGUES = [...new Set([...ROUNDS.map(r => r.league), ...DECOY_LEAGUES])];
 
 // Team/Nickname: binary — correct or wrong. League: optional flat bonus.
 const FULL_POINTS = { team: 10, nickname: 15 };
@@ -58,7 +24,10 @@ const FIRST_TRY_BONUS = 3; // flat, per field, not multiplied — correct on you
 const CLEAN_SHEET_BONUS = 5; // flat, once per round — finish with 0 misses used
 
 const FIELD_LABEL = { team: 'Team / City', nickname: 'Nickname', league: 'League / Sport' };
-const FIELD_OPTIONS = { team: ALL_TEAMS, nickname: ALL_NICKNAMES, league: ALL_LEAGUES };
+
+function formatDateLong(iso) {
+  return new Date(`${iso}T00:00:00`).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+}
 
 function multiplierFor(streak) {
   if (streak >= 12) return 3;
@@ -260,29 +229,29 @@ function Crest({ round, size = 132 }) {
         border: `2px solid ${INK}`,
         borderRadius: 6,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: round.primary,
-        position: 'relative',
+        background: CARD,
       }}
     >
-      <div style={{ position: 'absolute', inset: 4, border: `1px solid ${round.secondary}55` }} />
-      <span style={{ fontFamily: barlow, fontWeight: 800, fontSize: size * 0.36, textTransform: 'uppercase', color: round.secondary }}>
-        {round.mono}
-      </span>
+      <img
+        src={round.logo.url}
+        alt=""
+        referrerPolicy="no-referrer"
+        style={{ maxWidth: '80%', maxHeight: '80%', objectFit: 'contain' }}
+      />
     </div>
   );
 }
 
-function TypeaheadField({ field, round, status, answer, firstTry, essential, onSubmit, onSkip }) {
+function TypeaheadField({ field, round, status, answer, firstTry, essential, options, onSubmit, onSkip }) {
   const [value, setValue] = useState('');
   const [open, setOpen] = useState(false);
   const [shakeKey, setShakeKey] = useState(0);
   const boxRef = useRef(null);
 
-  const options = FIELD_OPTIONS[field];
   const matches = useMemo(() => {
     if (!value.trim()) return [];
     const v = value.toLowerCase();
-    return options.filter(o => o.toLowerCase().includes(v)).slice(0, 5);
+    return options.filter(o => o.toLowerCase().startsWith(v)).sort((a, b) => a.localeCompare(b));
   }, [value, options]);
 
   const check = (candidate) => {
@@ -383,7 +352,7 @@ function TypeaheadField({ field, round, status, answer, firstTry, essential, onS
           style={{
             position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 6,
             background: CARD, border: `1.5px solid ${INK}`, borderRadius: 6,
-            overflow: 'hidden', zIndex: 10, boxShadow: '0 8px 20px -8px rgba(0,0,0,0.25)',
+            maxHeight: 220, overflowY: 'auto', zIndex: 10, boxShadow: '0 8px 20px -8px rgba(0,0,0,0.25)',
           }}
         >
           {matches.map((m) => (
@@ -406,15 +375,15 @@ function TypeaheadField({ field, round, status, answer, firstTry, essential, onS
 /* ---------------------------------------------------------------
    START SCREEN
 ----------------------------------------------------------------- */
-function StartScreen({ nameInput, setNameInput, nameError, rememberedName, difficulty, setDifficulty, playedToday, onStart, onViewLeaderboard, onViewProfile, preview, previewLoading }) {
+function StartScreen({ nameInput, setNameInput, nameError, rememberedName, difficulty, setDifficulty, playedToday, puzzleReady, puzzleFailed, onStart, onViewLeaderboard, onViewProfile, preview, previewLoading }) {
   const alreadyPlayed = playedToday.has(difficulty);
-  const canStart = nameInput.trim() && !nameError && !alreadyPlayed;
+  const canStart = nameInput.trim() && !nameError && !alreadyPlayed && puzzleReady;
   const isReturning = rememberedName && nameInput.trim() === rememberedName.trim();
   return (
     <div style={{ width: '100%', maxWidth: 420, background: CARD, border: `1.5px solid ${INK}`, borderRadius: 10, padding: '32px 24px 24px' }}>
       <div style={{ textAlign: 'center', marginBottom: 26 }}>
         <div style={{ fontFamily: inter, fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', color: SUB, marginBottom: 10 }}>
-          {PUZZLE_DATE} · No. {PUZZLE_NO}
+          {formatDateLong(todayISO())} · No. {PUZZLE_NO}
         </div>
         <div style={{ fontFamily: barlow, fontWeight: 800, fontSize: 42, letterSpacing: '-0.01em', textTransform: 'uppercase', lineHeight: 0.95 }}>
           Logos for<br />Breakfast
@@ -422,7 +391,7 @@ function StartScreen({ nameInput, setNameInput, nameError, rememberedName, diffi
         <div style={{ fontFamily: inter, fontSize: 13, color: SUB, marginTop: 10, lineHeight: 1.5 }}>
           Coffee. Flapjacks. Logos.
           <br />
-          <span style={{ fontWeight: 700, color: INK }}>{ROUNDS.length} New Logos Daily.</span>
+          <span style={{ fontWeight: 700, color: INK }}>{DAILY_COUNT} New Logos Daily.</span>
         </div>
       </div>
 
@@ -491,7 +460,10 @@ function StartScreen({ nameInput, setNameInput, nameError, rememberedName, diffi
           fontFamily: inter, fontWeight: 600, fontSize: 14, color: canStart ? '#FFF' : '#9B9B93',
         }}
       >
-        {alreadyPlayed ? `${difficulty} already played today` : "Start Today's Puzzle"}
+        {alreadyPlayed ? `${difficulty} already played today`
+          : puzzleFailed ? "Today's puzzle isn't ready yet"
+          : !puzzleReady ? 'Loading…'
+          : "Start Today's Puzzle"}
       </button>
       <div style={{ display: 'flex', gap: 8 }}>
         <button
@@ -752,12 +724,24 @@ export default function LogoDaily() {
   const [misses, setMisses] = useState(0);
   const [attempts, setAttempts] = useState(EMPTY_ATTEMPTS); // per-field guess count, for the first-try bonus
 
-  const round = ROUNDS[roundIdx];
+  const [catalog, setCatalog] = useState([]); // full team pool, all leagues — feeds the typeahead
+  const [dailyPuzzle, setDailyPuzzle] = useState(null); // today's { EASY, MEDIUM, HARD, EXPERT, SICKO }
+  const [puzzleFailed, setPuzzleFailed] = useState(false);
+
+  const rounds = dailyPuzzle?.[activeDifficulty] || [];
+  const round = rounds[roundIdx];
   const multiplier = multiplierFor(streak);
-  const isLastRound = roundIdx === ROUNDS.length - 1;
+  const isLastRound = roundIdx === rounds.length - 1;
   const roundOver = misses >= MAX_MISSES;
 
-  // Remember the player's name between visits + preload the leaderboard.
+  const fieldOptions = useMemo(() => ({
+    team: [...new Set(catalog.map((t) => t.team))],
+    nickname: [...new Set(catalog.map((t) => t.nickname))],
+    league: [...new Set(catalog.map((t) => t.league))],
+  }), [catalog]);
+
+  // Remember the player's name between visits + preload the leaderboard +
+  // fetch the team catalog and today's puzzle.
   useEffect(() => {
     try {
       const saved = localStorage.getItem(NAME_KEY);
@@ -767,6 +751,16 @@ export default function LogoDaily() {
       }
     } catch (e) { /* localStorage unavailable (private browsing etc) — fine, just won't remember */ }
     refreshLeaderboard();
+
+    fetch(`${DATA_BASE}/catalog.json`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then(setCatalog)
+      .catch(() => setCatalog([]));
+
+    fetch(`${DATA_BASE}/daily-puzzle-${todayISO()}.json`)
+      .then((r) => { if (!r.ok) throw new Error('puzzle not found'); return r.json(); })
+      .then(setDailyPuzzle)
+      .catch(() => setPuzzleFailed(true));
   }, []);
 
   // Look up this player's own record whenever their name settles, so we know
@@ -907,7 +901,7 @@ export default function LogoDaily() {
     return sum + pointsFor(f, 'full', fieldState[f].firstTry);
   }, 0) + (misses === 0 ? CLEAN_SHEET_BONUS : 0);
 
-  const rank = rankFor(correctRounds, ROUNDS.length);
+  const rank = rankFor(correctRounds, rounds.length);
 
   // Save the result to the shared leaderboard once, right when the puzzle completes.
   useEffect(() => {
@@ -964,6 +958,8 @@ export default function LogoDaily() {
           difficulty={difficulty}
           setDifficulty={setDifficulty}
           playedToday={playedToday}
+          puzzleReady={!!dailyPuzzle}
+          puzzleFailed={puzzleFailed}
           onStart={handleStart}
           onViewLeaderboard={() => setView('leaderboard')}
           onViewProfile={() => setView('profile')}
@@ -985,7 +981,7 @@ export default function LogoDaily() {
           {/* masthead */}
           <div style={{ textAlign: 'center', marginBottom: 18 }}>
             <div style={{ fontFamily: inter, fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', color: SUB, marginBottom: 6 }}>
-              {PUZZLE_DATE} · No. {PUZZLE_NO} · {playerName} · {activeDifficulty}
+              {formatDateLong(todayISO())} · No. {PUZZLE_NO} · {playerName} · {activeDifficulty}
             </div>
             <div style={{ fontFamily: barlow, fontWeight: 800, fontSize: 32, letterSpacing: '-0.01em', textTransform: 'uppercase' }}>
               Logos for Breakfast
@@ -1007,7 +1003,7 @@ export default function LogoDaily() {
               )}
             </div>
             <div style={{ fontFamily: inter, fontSize: 13, color: SUB }}>
-              Round {roundIdx + 1}/{ROUNDS.length} · <strong style={{ color: INK }}>{score} pts</strong>
+              Round {roundIdx + 1}/{rounds.length} · <strong style={{ color: INK }}>{score} pts</strong>
             </div>
           </div>
 
@@ -1023,7 +1019,7 @@ export default function LogoDaily() {
 
           {/* progress dots */}
           <div style={{ display: 'flex', gap: 5, marginBottom: 24 }}>
-            {ROUNDS.map((_, i) => (
+            {rounds.map((_, i) => (
               <div key={i} style={{ flex: 1, height: 4, borderRadius: 2, background: i < roundIdx ? GREEN : i === roundIdx ? INK : LINE }} />
             ))}
           </div>
@@ -1044,6 +1040,7 @@ export default function LogoDaily() {
                 answer={fieldState[f].answer}
                 firstTry={fieldState[f].firstTry}
                 essential={f !== 'league'}
+                options={fieldOptions[f]}
                 onSubmit={handleSubmit}
                 onSkip={handleSkip}
               />
@@ -1106,7 +1103,7 @@ export default function LogoDaily() {
                   </div>
                   <div style={{ width: 1, background: LINE }} />
                   <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontFamily: barlow, fontWeight: 800, fontSize: 30 }}>{correctRounds}/{ROUNDS.length}</div>
+                    <div style={{ fontFamily: barlow, fontWeight: 800, fontSize: 30 }}>{correctRounds}/{rounds.length}</div>
                     <div style={{ fontFamily: inter, fontSize: 11, color: SUB }}>full logos</div>
                   </div>
                   <div style={{ width: 1, background: LINE }} />
@@ -1121,7 +1118,7 @@ export default function LogoDaily() {
                     Today's sheet
                   </div>
                   <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
-                    {ROUNDS.map((r, i) => {
+                    {rounds.map((r, i) => {
                       const h = history[i] || {};
                       const bothFull = h.team === 'full' && h.nickname === 'full';
                       const oneFull = h.team === 'full' || h.nickname === 'full';
@@ -1133,7 +1130,7 @@ export default function LogoDaily() {
                           title={`${r.team} ${r.nickname}`}
                           style={{ width: 44, height: 44, borderRadius: 6, background: tileBg, border: `1.5px solid ${tileBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}
                         >
-                          <div style={{ width: 16, height: 16, borderRadius: 3, background: r.primary }} />
+                          <img src={r.logo.url} alt="" referrerPolicy="no-referrer" style={{ width: 26, height: 26, objectFit: 'contain' }} />
                           {h.league === 'full' && (
                             <div style={{ position: 'absolute', top: -3, right: -3, width: 9, height: 9, borderRadius: '50%', background: BLUE, border: `1.5px solid ${CARD}` }} />
                           )}

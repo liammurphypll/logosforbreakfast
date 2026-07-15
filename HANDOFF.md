@@ -68,9 +68,13 @@ crest image.
 - **Difficulty tiers** (defined in `pick-daily.js`):
   - EASY — NFL/NBA/MLB/NHL, primary logos only
   - MEDIUM — + NCAA, all logo types
-  - HARD — + EPL/Bundesliga/Serie A/La Liga/WNBA
-  - EXPERT — + AHL/International League/Pacific Coast League
-  - SICKO — any league in the catalog, no restriction
+  - HARD — + EPL/Bundesliga/Serie A/La Liga/WNBA/PWHL, all logo types
+  - EXPERT — + AHL/International League/Pacific Coast League/KHL/ECHL/SPHL/CFL,
+    secondary/alternate logos only (never primary)
+  - SICKO — any league in the catalog, secondary/alternate logos only
+    (never primary)
+  - A team is only eligible for EXPERT/SICKO if it actually has a
+    secondary/alternate logo on file — no silent fallback to primary.
   - Tier names are shown to players unlabeled — never surface which
     leagues are in a tier in the UI.
 - **No repeats within a day** — a team picked for EASY won't also show
