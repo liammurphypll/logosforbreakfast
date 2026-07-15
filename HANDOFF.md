@@ -22,7 +22,11 @@ that needs to change in this file is swapping mock data for real data.**
    sportslogos.net, only Claude Code's environment can).
 2. **`scripts/pick-daily.js`** — fully written, should work as-is once
    `catalog.json` exists. Samples 5 difficulty tiers × 10 teams/day with
-   league-spread + cooldown logic, writes `data/daily-puzzle-{date}.json`.
+   league-spread + cooldown logic, upserts today's puzzle into the
+   `daily_puzzles` table in Supabase (not a static file — a real deploy
+   builds straight from git, and a gitignored file would never be present
+   in production; see `.github/workflows/daily-puzzle.yml` for the actual
+   daily trigger).
 3. **Wiring** — replace the mock `ROUNDS` array in the game with a fetch
    of today's puzzle for the selected difficulty tier, and swap the
    `<Crest/>` placeholder component for a real `<img src={round.logo.url}/>`.
@@ -44,7 +48,7 @@ that needs to change in this file is swapping mock data for real data.**
 }
 ```
 
-**daily-puzzle-{date}.json** (what the game actually consumes):
+**`daily_puzzles.data`** (Supabase jsonb column, keyed by `play_date` — what the game actually consumes):
 ```json
 {
   "date": "2026-07-15",
@@ -121,6 +125,29 @@ crest image.
    allowlist is limited to package registries). All scraping must run
    from Claude Code locally, same pattern as the existing
    laxnumbers.com scraper.
+
+## Production deployment
+
+- **`catalog.json` is committed** (`public/data/catalog.json`) — it's a
+  big, mostly-static reference dataset, fine as a build-time static asset.
+  Vite serves it at `/data/catalog.json`.
+- **Today's puzzle is NOT a static file** — `daily-puzzle-{date}.json` /
+  `used-log.json` are gitignored on purpose (regenerated daily, not
+  source). A real deploy (Render, etc.) builds straight from git, so
+  those files are never actually present in production — this bit a real
+  deploy before this section was written. The daily puzzle and the
+  cooldown history now live in Supabase (`daily_puzzles` and
+  `team_usage_log` tables — see `supabase/schema.sql`), which the
+  deployed frontend reads directly at runtime, independent of any
+  build/deploy cycle.
+- **`.github/workflows/daily-puzzle.yml`** runs `pick-daily.js` on a daily
+  cron schedule (05:00 UTC) via GitHub Actions, using `VITE_SUPABASE_URL`
+  / `VITE_SUPABASE_ANON_KEY` repo secrets. This is what actually keeps the
+  puzzle fresh — nothing about deploying the frontend itself needs to
+  change day to day.
+- Render's build command just needs to be a normal `npm install && npm
+  run build` with publish directory `dist` — no scraper/picker steps
+  belong in the frontend build anymore.
 
 ## Suggested build order
 

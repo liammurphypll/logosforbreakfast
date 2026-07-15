@@ -1,22 +1,37 @@
 // scripts/pick-daily.js
 //
-// Run daily via cron / GitHub Action. Reads public/data/catalog.json (built
-// by build-catalog.js) and public/data/used-log.json (rolling history), and
-// writes public/data/daily-puzzle-{date}.json with all 5 difficulty tiers
-// for the day. Lives under public/ so Vite serves it statically and the
-// game can fetch(`/data/daily-puzzle-${today}.json`) at runtime.
+// Run daily via cron / GitHub Action (see .github/workflows/daily-puzzle.yml).
+// Reads public/data/catalog.json (built by build-catalog.js, committed to
+// git — a big mostly-static reference dataset, fine as a static asset) and
+// the team_usage_log table in Supabase (rolling 14-day cooldown history),
+// and upserts today's 5 difficulty tiers into the daily_puzzles table.
+//
+// Puzzles live in Supabase rather than a static public/data/daily-puzzle-
+// {date}.json file because that file is gitignored (regenerated daily, not
+// source) — a real deploy (Render, etc.) builds straight from git and would
+// never actually have it. Supabase is a live source the deployed frontend
+// can fetch from directly, independent of any build/deploy cycle.
 //
 // USAGE:
 //   node scripts/pick-daily.js
+//
+// Needs VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY in the environment —
+// loaded from .env for local runs; set as real environment variables in
+// CI/CD (GitHub Actions secrets, Render env vars, etc.).
 
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { createClient } from '@supabase/supabase-js';
+
+try { process.loadEnvFile(); } catch { /* no .env file — env vars are already set (CI/Render) */ }
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = path.join(__dirname, '..', 'public', 'data');
+const CATALOG_PATH = path.join(__dirname, '..', 'public', 'data', 'catalog.json');
 const COOLDOWN_DAYS = 14;
 const DAILY_COUNT = 10; // matches ROUNDS.length in the game
+
+const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY);
 
 // Parses "1931 - 1937" / "2014 - Pres" / "1960 - 1960" into the year the
 // logo went OUT of use (Infinity for "Pres", i.e. still current).
@@ -151,9 +166,8 @@ function pickTier(catalog, cooldownIds, excludeIds, tierConfig) {
   return shuffle(picks);
 }
 
-function run() {
-  const catalog = loadJSON(path.join(DATA_DIR, 'catalog.json'), []);
-  const usedLog = loadJSON(path.join(DATA_DIR, 'used-log.json'), []);
+async function run() {
+  const catalog = loadJSON(CATALOG_PATH, []);
   const today = new Date().toISOString().slice(0, 10);
 
   if (catalog.length === 0) {
@@ -161,10 +175,17 @@ function run() {
     process.exit(1);
   }
 
-  const cooldownIds = new Set(
-    usedLog.filter((e) => daysAgo(e.date) < COOLDOWN_DAYS).map((e) => e.teamId)
-  );
+  const cooldownCutoff = new Date(Date.now() - COOLDOWN_DAYS * 86400000).toISOString().slice(0, 10);
+  const { data: usageRows, error: usageError } = await supabase
+    .from('team_usage_log')
+    .select('team_id, used_date')
+    .gte('used_date', cooldownCutoff);
+  if (usageError) {
+    console.error('Failed to read team_usage_log:', usageError.message);
+    process.exit(1);
+  }
 
+  const cooldownIds = new Set(usageRows.map((r) => r.team_id));
   const excludeIds = new Set(); // teams already used by an earlier tier today
   const output = { date: today };
 
@@ -184,13 +205,33 @@ function run() {
     });
   }
 
-  fs.writeFileSync(path.join(DATA_DIR, `daily-puzzle-${today}.json`), JSON.stringify(output, null, 2));
+  const { error: upsertError } = await supabase
+    .from('daily_puzzles')
+    .upsert({ play_date: today, data: output }, { onConflict: 'play_date' });
+  if (upsertError) {
+    console.error('Failed to upsert daily_puzzles:', upsertError.message);
+    process.exit(1);
+  }
 
-  const newLog = [
-    ...usedLog.filter((e) => daysAgo(e.date) < COOLDOWN_DAYS * 3),
-    ...[...excludeIds].map((teamId) => ({ teamId, date: today })),
-  ];
-  fs.writeFileSync(path.join(DATA_DIR, 'used-log.json'), JSON.stringify(newLog, null, 2));
+  const { error: insertError } = await supabase
+    .from('team_usage_log')
+    .insert([...excludeIds].map((teamId) => ({ team_id: teamId, used_date: today })));
+  if (insertError) {
+    console.error('Failed to insert team_usage_log:', insertError.message);
+    process.exit(1);
+  }
+
+  // Keep the log bounded, mirroring the old used-log.json trimming — prune
+  // anything older than the window pick-daily actually consults (with a
+  // margin), rather than growing this table forever.
+  const pruneCutoff = new Date(Date.now() - COOLDOWN_DAYS * 3 * 86400000).toISOString().slice(0, 10);
+  const { error: pruneError } = await supabase
+    .from('team_usage_log')
+    .delete()
+    .lt('used_date', pruneCutoff);
+  if (pruneError) {
+    console.warn('Failed to prune old team_usage_log rows (non-fatal):', pruneError.message);
+  }
 
   console.log(`Picked 5 tiers × ${DAILY_COUNT} for ${today}`);
 }

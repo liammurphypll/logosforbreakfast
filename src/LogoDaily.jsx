@@ -3,11 +3,14 @@ import { Check, X, Flame, ArrowRight, RotateCcw, Minus, Share2, Trophy, ChevronL
 import { supabase } from './supabaseClient.js';
 
 /* ---------------------------------------------------------------
-   REAL DATA — fetched at runtime from public/data/ (see build-catalog.js
-   and pick-daily.js). Each round is { team, nickname, league, logo:
-   { url, type, era } }. catalog.json (the full team pool, all leagues)
-   feeds the typeahead's decoy options; daily-puzzle-{date}.json is
-   today's 5 difficulty tiers of 10 rounds each.
+   REAL DATA — catalog.json is a static asset fetched from public/data/
+   (see build-catalog.js) — big, mostly-static reference data (feeds the
+   typeahead's decoy options), fine as a build-time file. Today's puzzle
+   comes from the daily_puzzles table in Supabase instead (see
+   pick-daily.js) — that one's genuinely daily-changing data, and a static
+   gitignored file wouldn't exist at all on a real deploy that builds
+   straight from git. Each round is { team, nickname, league, logo: { url,
+   type, era } }; a day's puzzle is 5 difficulty tiers of 10 rounds each.
 ----------------------------------------------------------------- */
 const DATA_BASE = '/data';
 const DAILY_COUNT = 10; // matches DAILY_COUNT in pick-daily.js
@@ -757,9 +760,15 @@ export default function LogoDaily() {
       .then(setCatalog)
       .catch(() => setCatalog([]));
 
-    fetch(`${DATA_BASE}/daily-puzzle-${todayISO()}.json`)
-      .then((r) => { if (!r.ok) throw new Error('puzzle not found'); return r.json(); })
-      .then(setDailyPuzzle)
+    supabase
+      .from('daily_puzzles')
+      .select('data')
+      .eq('play_date', todayISO())
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (error || !data) throw error || new Error('puzzle not found');
+        setDailyPuzzle(data.data);
+      })
       .catch(() => setPuzzleFailed(true));
   }, []);
 
