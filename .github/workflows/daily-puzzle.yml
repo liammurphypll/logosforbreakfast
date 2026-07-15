@@ -1,0 +1,25 @@
+name: Generate daily puzzle
+
+on:
+  schedule:
+    # 10:00 UTC = 5:00 AM EST (UTC-5). GitHub Actions cron is fixed UTC and
+    # doesn't shift for daylight saving, so this actually fires at 6:00 AM
+    # during EDT (mid-March to early November, i.e. most of the year) —
+    # change to '0 9 * * *' instead if you'd rather it stay accurate through
+    # summer (EDT) and drift an hour early during winter (EST) instead.
+    - cron: '0 10 * * *'
+  workflow_dispatch: {} # lets you trigger a run manually from the Actions tab
+
+jobs:
+  pick-daily:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: node scripts/pick-daily.js
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
