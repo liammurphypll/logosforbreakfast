@@ -3,6 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- sportslogos.net's CDN blocks any request carrying a cross-origin
+         Referer header (hotlink protection) — the per-<img> referrerPolicy
+         attribute doesn't reliably suppress it on all browsers (seen
+         failing on iOS Safari), so this document-level policy is a second,
+         more broadly-supported way of telling the browser to omit it. -->
+    <meta name="referrer" content="no-referrer" />
     <title>Logos for Breakfast</title>
   </head>
   <body>
