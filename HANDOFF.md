@@ -68,7 +68,7 @@ crest image.
 - **Difficulty tiers** (defined in `pick-daily.js`):
   - EASY — NFL/NBA/MLB/NHL, primary logos only
   - MEDIUM — + NCAA, all logo types
-  - HARD — + EPL/Bundesliga/Serie A/La Liga/WNBA/PWHL, all logo types
+  - HARD — + Bundesliga/Serie A/La Liga/WNBA/PWHL, all logo types
   - EXPERT — + AHL/International League/Pacific Coast League/KHL/ECHL/SPHL/CFL,
     secondary/alternate logos only (never primary)
   - SICKO — any league in the catalog, secondary/alternate logos only
@@ -77,6 +77,11 @@ crest image.
     secondary/alternate logo on file — no silent fallback to primary.
   - Tier names are shown to players unlabeled — never surface which
     leagues are in a tier in the UI.
+  - **EPL is not scrapable from sportslogos.net** — no English Premier
+    League section exists on the site under any name (checked their
+    league-ID range, the Soccer sport-category index, and site search).
+    Left out of tier configs entirely rather than configured with no
+    backing data.
 - **No repeats within a day** — a team picked for EASY won't also show
   up in MEDIUM/HARD/EXPERT/SICKO that same day (handled in `pick-daily.js`
   via the `excludeIds` set).

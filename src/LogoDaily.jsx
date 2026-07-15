@@ -978,6 +978,15 @@ export default function LogoDaily() {
 
       {view === 'playing' && (
         <div style={{ width: '100%', maxWidth: 420, background: CARD, border: `1.5px solid ${INK}`, borderRadius: 10, padding: '28px 24px 24px' }}>
+          {/* back to home */}
+          <button
+            type="button"
+            onClick={() => { resetGame(); setView('start'); }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, padding: 4, marginBottom: 4, color: SUB, fontFamily: inter, fontSize: 12, fontWeight: 600 }}
+          >
+            <ChevronLeft size={16} /> Home
+          </button>
+
           {/* masthead */}
           <div style={{ textAlign: 'center', marginBottom: 18 }}>
             <div style={{ fontFamily: inter, fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', color: SUB, marginBottom: 6 }}>

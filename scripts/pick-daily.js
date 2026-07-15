@@ -22,11 +22,16 @@ const DAILY_COUNT = 10; // matches ROUNDS.length in the game
 // catalog `logo.type` values ('primary' or 'secondary' — note the scraper
 // already folds sportslogos.net's "Alternate" sections into 'secondary',
 // so 'secondary' here covers both secondary AND alternate marks).
+//
+// EPL is deliberately absent: sportslogos.net doesn't have an English
+// Premier League section under any name (checked their league-ID range,
+// Soccer sport-category index, and site search) — English clubs simply
+// aren't cataloged there, so it can't be scraped from this data source.
 const TIERS = {
   EASY:   { leagues: ['NFL', 'NBA', 'MLB', 'NHL'], logoTypes: ['primary'] },
   MEDIUM: { leagues: ['NFL', 'NBA', 'MLB', 'NHL', 'NCAA'], logoTypes: null },
-  HARD:   { leagues: ['NFL', 'NBA', 'MLB', 'NHL', 'NCAA', 'EPL', 'Bundesliga', 'Serie A', 'La Liga', 'WNBA', 'PWHL'], logoTypes: null },
-  EXPERT: { leagues: ['NFL', 'NBA', 'MLB', 'NHL', 'NCAA', 'EPL', 'Bundesliga', 'Serie A', 'La Liga', 'WNBA', 'PWHL', 'AHL', 'International League', 'Pacific Coast League', 'KHL', 'ECHL', 'SPHL', 'CFL'], logoTypes: ['secondary'] },
+  HARD:   { leagues: ['NFL', 'NBA', 'MLB', 'NHL', 'NCAA', 'Bundesliga', 'Serie A', 'La Liga', 'WNBA', 'PWHL'], logoTypes: null },
+  EXPERT: { leagues: ['NFL', 'NBA', 'MLB', 'NHL', 'NCAA', 'Bundesliga', 'Serie A', 'La Liga', 'WNBA', 'PWHL', 'AHL', 'International League', 'Pacific Coast League', 'KHL', 'ECHL', 'SPHL', 'CFL'], logoTypes: ['secondary'] },
   SICKO:  { leagues: null, logoTypes: ['secondary'] }, // null = every league in the catalog
 };
 const TIER_ORDER = ['EASY', 'MEDIUM', 'HARD', 'EXPERT', 'SICKO'];
