@@ -2,3 +2,8 @@ node_modules/
 dist/
 .env
 .DS_Store
+
+# Generated daily by pick-daily.js (cron/GitHub Action) — not source, keep
+# catalog.json (the scraped master data) but not day-to-day picker output.
+data/daily-puzzle-*.json
+data/used-log.json

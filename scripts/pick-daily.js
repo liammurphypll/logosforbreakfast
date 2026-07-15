@@ -7,9 +7,11 @@
 // USAGE:
 //   node scripts/pick-daily.js
 
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = path.join(__dirname, '..', 'data');
 const COOLDOWN_DAYS = 14;
 const DAILY_COUNT = 10; // matches ROUNDS.length in the game
