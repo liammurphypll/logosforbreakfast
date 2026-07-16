@@ -16,19 +16,29 @@
 // allowed through; anything longer is treated as a spoiler and dropped,
 // regardless of whether it happens to spell out the team's own name.
 //
-// OCR on small/stylized sports-logo thumbnails is inherently imperfect:
-// curved or heavily stylized script text is often misread — that's a real
-// ceiling of tesseract's traditional OCR approach, tested and not
-// meaningfully improved by upscaling or alternate page-segmentation modes.
-// Clean, boxy lettering is reliably caught IF it's dark text on a light
-// background — Tesseract is trained on document scans and is weak on the
-// reverse (e.g. white "UTAH" lettering on a solid black rectangle used to
-// read as nothing at all). preprocessForOCR() below auto-inverts images
-// that are mostly dark before recognition, which fixes that specific class
-// of miss. Cursive/script text remains a known gap; this should be treated
-// as a real reduction in text-logo contamination, not a guarantee of zero.
-// It also means occasional false positives on totally clean icon-only
-// logos where OCR hallucinates a few letters out of the shape's edges.
+// OCR on small/stylized sports-logo thumbnails is inherently imperfect.
+// Two distinct failure modes found by visual-sampling the catalog:
+//   1. Light text on a dark background reads as nothing to tesseract
+//      (it's trained on document scans — dark text on light). Fixed by
+//      also trying a color-inverted pass.
+//   2. A single global "is this image mostly dark?" brightness check is
+//      too crude for real logos, which often mix light and dark regions
+//      (e.g. a dark circular border around a light banner with dark
+//      text) — picking ONE polarity by average brightness sometimes
+//      inverts an image that was already readable, turning a correct
+//      read into garbage. Fixed by running BOTH polarities every time and
+//      flagging if EITHER shows significant text, instead of guessing
+//      which one to use upfront.
+// Remaining known gap: curved/arched text (following a badge or seal's
+// edge, e.g. text arched over a mascot) and heavily cursive script are
+// still frequently missed regardless of polarity — tested upscaling and
+// alternate tesseract page-segmentation modes against real examples of
+// both and neither meaningfully helped. That's a real ceiling of
+// tesseract's traditional OCR approach, not something more preprocessing
+// fixes. This filter is a real reduction in text-logo contamination, not
+// a guarantee of zero — occasional false positives are also possible on
+// totally clean icon-only logos where OCR hallucinates a few letters out
+// of the shape's edges.
 
 import { createWorker } from 'tesseract.js';
 import sharp from 'sharp';
@@ -40,14 +50,11 @@ function ocrHasSignificantText(ocrText) {
   return letterRuns.some((run) => run.length >= MIN_SIGNIFICANT_TEXT_LEN);
 }
 
-// Auto-inverts mostly-dark images before OCR — light text on a dark
-// background otherwise reads as nothing to tesseract.
-async function preprocessForOCR(buf) {
+async function bothPolarities(buf) {
   const gray = sharp(buf).grayscale();
-  const stats = await gray.stats();
-  const meanBrightness = stats.channels[0].mean;
-  const oriented = meanBrightness < 128 ? gray.negate() : gray;
-  return oriented.png().toBuffer();
+  const normal = await gray.png().toBuffer();
+  const inverted = await gray.clone().negate().png().toBuffer();
+  return [normal, inverted];
 }
 
 export async function filterTextLogos(catalog) {
@@ -64,9 +71,11 @@ export async function filterTextLogos(catalog) {
       try {
         const res = await fetch(logo.url);
         const rawBuf = Buffer.from(await res.arrayBuffer());
-        const buf = await preprocessForOCR(rawBuf);
-        const { data } = await worker.recognize(buf);
-        if (ocrHasSignificantText(data.text)) {
+        const [normal, inverted] = await bothPolarities(rawBuf);
+        const normalResult = await worker.recognize(normal);
+        const hasText = ocrHasSignificantText(normalResult.data.text)
+          || ocrHasSignificantText((await worker.recognize(inverted)).data.text);
+        if (hasText) {
           flagged.push(logo);
           continue;
         }
