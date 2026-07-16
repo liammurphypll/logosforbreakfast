@@ -109,11 +109,18 @@ const LEAGUES_TO_SCRAPE = [
 // sections; in that case both count as secondary-tier logos.
 // Everything else (Player Logo Pages, Gear For Sale, Helmets, Wordmark,
 // Uniforms, Anniversary, "* Dark" variants, Throwback, Stadium, Misc, Cap/
-// Caps/Game-Worn Cap Photos) is excluded — dark-mode variants and
-// throwbacks are recolors/reissues of logos already captured elsewhere,
-// not distinct identity marks; cap sections (common on MLB team pages —
-// "Cap Logos History", "Caps History", "Game-Worn Cap Photos History")
-// are literal baseball-cap merchandise photos/renders, not team logos.
+// Caps/Game-Worn Cap Photos, "Alternate Identity") is excluded —
+// dark-mode variants and throwbacks are recolors/reissues of logos
+// already captured elsewhere, not distinct identity marks; cap sections
+// (common on MLB team pages — "Cap Logos History", "Caps History",
+// "Game-Worn Cap Photos History") are literal baseball-cap merchandise
+// photos/renders, not team logos. "Alternate Identity Logos History" is
+// a DIFFERENT, more specific section than plain "Alternate Logos
+// History" — confirmed live (e.g. Las Vegas Aviators has both, as
+// separate sections) — it's sportslogos.net's label for a MiLB team's
+// novelty/promotional secondary brand (often literally a baseball-cap
+// shape with a mascot on it, e.g. Columbus Clippers, Charlotte Knights),
+// not the team's actual secondary logo.
 function classifySection(sectionTitle) {
   const t = sectionTitle.toLowerCase();
   if (!t.includes('logo')) return null; // e.g. "Gear For Sale"
@@ -127,7 +134,8 @@ function classifySection(sectionTitle) {
     t.includes('misc') ||
     t.includes('stadium') ||
     t.includes('player') ||
-    t.includes('cap')
+    t.includes('cap') ||
+    t.includes('identity')
   ) {
     return null;
   }

@@ -10243,9 +10243,19 @@
     "league": "International League",
     "logos": [
       {
+        "url": "https://content.sportslogos.net/logos/50/1101/thumbs/110162491985.gif",
+        "type": "primary",
+        "era": "1985 - 1987"
+      },
+      {
         "url": "https://content.sportslogos.net/logos/50/1101/thumbs/110149461987.gif",
         "type": "primary",
         "era": "1988 - 1988"
+      },
+      {
+        "url": "https://content.sportslogos.net/logos/36/924/thumbs/92464251998.gif",
+        "type": "primary",
+        "era": "1998 - 2003"
       },
       {
         "url": "https://content.sportslogos.net/logos/36/924/thumbs/4500.gif",
@@ -10376,16 +10386,6 @@
         "url": "https://content.sportslogos.net/logos/36/925/thumbs/92566892014.gif",
         "type": "secondary",
         "era": "2014 - 2022"
-      },
-      {
-        "url": "https://content.sportslogos.net/logos/36/925/thumbs/92570772019.gif",
-        "type": "secondary",
-        "era": "2019 - Pres"
-      },
-      {
-        "url": "https://content.sportslogos.net/logos/36/925/thumbs/92510822019.gif",
-        "type": "secondary",
-        "era": "2019 - Pres"
       }
     ]
   },
@@ -10429,44 +10429,14 @@
         "era": "2009 - Pres"
       },
       {
+        "url": "https://content.sportslogos.net/logos/36/926/thumbs/4511.gif",
+        "type": "secondary",
+        "era": "1996 - 2008"
+      },
+      {
         "url": "https://content.sportslogos.net/logos/36/926/thumbs/wdxmo94apcf6cebfhm6z626j8.gif",
         "type": "secondary",
         "era": "2009 - Pres"
-      },
-      {
-        "url": "https://content.sportslogos.net/logos/36/926/thumbs/92683022019.gif",
-        "type": "secondary",
-        "era": "2019 - Pres"
-      },
-      {
-        "url": "https://content.sportslogos.net/logos/36/926/thumbs/92644332019.gif",
-        "type": "secondary",
-        "era": "2019 - Pres"
-      },
-      {
-        "url": "https://content.sportslogos.net/logos/36/926/thumbs/92658852019.gif",
-        "type": "secondary",
-        "era": "2019 - Pres"
-      },
-      {
-        "url": "https://content.sportslogos.net/logos/36/926/thumbs/92676412019.gif",
-        "type": "secondary",
-        "era": "2019 - Pres"
-      },
-      {
-        "url": "https://content.sportslogos.net/logos/36/926/thumbs/92681892019.gif",
-        "type": "secondary",
-        "era": "2019 - Pres"
-      },
-      {
-        "url": "https://content.sportslogos.net/logos/36/926/thumbs/92672272022.gif",
-        "type": "secondary",
-        "era": "2022 - 2022"
-      },
-      {
-        "url": "https://content.sportslogos.net/logos/36/926/thumbs/92636532022.gif",
-        "type": "secondary",
-        "era": "2022 - 2022"
       }
     ]
   },
@@ -10798,16 +10768,6 @@
         "url": "https://content.sportslogos.net/logos/37/1016/thumbs/l9rr2ud3wy9ufqq6j5qdcgm7o.gif",
         "type": "secondary",
         "era": "2007 - 2020"
-      },
-      {
-        "url": "https://content.sportslogos.net/logos/36/6870/thumbs/687077702021.gif",
-        "type": "secondary",
-        "era": "2021 - Pres"
-      },
-      {
-        "url": "https://content.sportslogos.net/logos/36/6870/thumbs/687033392021.gif",
-        "type": "secondary",
-        "era": "2021 - Pres"
       }
     ]
   },
@@ -10872,56 +10832,6 @@
         "url": "https://content.sportslogos.net/logos/37/6667/thumbs/las-vegas-aviators-alternate-logo-2026-666744112026-thumb.png",
         "type": "secondary",
         "era": "2026 - Pres"
-      },
-      {
-        "url": "https://content.sportslogos.net/logos/37/6667/thumbs/666759262019.gif",
-        "type": "secondary",
-        "era": "2019 - Pres"
-      },
-      {
-        "url": "https://content.sportslogos.net/logos/37/6667/thumbs/666718462019.gif",
-        "type": "secondary",
-        "era": "2019 - Pres"
-      },
-      {
-        "url": "https://content.sportslogos.net/logos/37/6667/thumbs/666737762019.gif",
-        "type": "secondary",
-        "era": "2019 - 2022"
-      },
-      {
-        "url": "https://content.sportslogos.net/logos/37/6667/thumbs/666737812019.gif",
-        "type": "secondary",
-        "era": "2019 - Pres"
-      },
-      {
-        "url": "https://content.sportslogos.net/logos/37/6667/thumbs/666743152019.gif",
-        "type": "secondary",
-        "era": "2019 - Pres"
-      },
-      {
-        "url": "https://content.sportslogos.net/logos/37/6667/thumbs/666745682019.gif",
-        "type": "secondary",
-        "era": "2019 - 2022"
-      },
-      {
-        "url": "https://content.sportslogos.net/logos/37/6667/thumbs/666798312023.gif",
-        "type": "secondary",
-        "era": "2023 - Pres"
-      },
-      {
-        "url": "https://content.sportslogos.net/logos/37/6667/thumbs/666773142023.gif",
-        "type": "secondary",
-        "era": "2023 - Pres"
-      },
-      {
-        "url": "https://content.sportslogos.net/logos/37/6667/thumbs/666756702023.gif",
-        "type": "secondary",
-        "era": "2023 - Pres"
-      },
-      {
-        "url": "https://content.sportslogos.net/logos/37/6667/thumbs/666722772023.gif",
-        "type": "secondary",
-        "era": "2023 - Pres"
       }
     ]
   },
@@ -11357,31 +11267,6 @@
         "url": "https://content.sportslogos.net/logos/37/2721/thumbs/bewrr694xhouygkiji2e7frbf.gif",
         "type": "secondary",
         "era": "2009 - 2021"
-      },
-      {
-        "url": "https://content.sportslogos.net/logos/37/2721/thumbs/272194172019.gif",
-        "type": "secondary",
-        "era": "2019 - 2022"
-      },
-      {
-        "url": "https://content.sportslogos.net/logos/37/2721/thumbs/272152892019.gif",
-        "type": "secondary",
-        "era": "2019 - 2022"
-      },
-      {
-        "url": "https://content.sportslogos.net/logos/37/2721/thumbs/272160622023.gif",
-        "type": "secondary",
-        "era": "2023 - Pres"
-      },
-      {
-        "url": "https://content.sportslogos.net/logos/37/2721/thumbs/272181832023.gif",
-        "type": "secondary",
-        "era": "2023 - Pres"
-      },
-      {
-        "url": "https://content.sportslogos.net/logos/37/2721/thumbs/272192152023.gif",
-        "type": "secondary",
-        "era": "2023 - Pres"
       }
     ]
   },
@@ -11449,6 +11334,11 @@
     "nickname": "Express",
     "league": "Pacific Coast League",
     "logos": [
+      {
+        "url": "https://content.sportslogos.net/logos/37/1024/thumbs/lyjxf6gmhaqz8ea4e8ik7dxc9.gif",
+        "type": "primary",
+        "era": "2011 - 2018"
+      },
       {
         "url": "https://content.sportslogos.net/logos/37/1024/thumbs/4857.gif",
         "type": "secondary",
@@ -11566,6 +11456,11 @@
     "league": "International League",
     "logos": [
       {
+        "url": "https://content.sportslogos.net/logos/36/4937/thumbs/493717372013.gif",
+        "type": "primary",
+        "era": "2013 - Pres"
+      },
+      {
         "url": "https://content.sportslogos.net/logos/36/4937/thumbs/493720072013.gif",
         "type": "secondary",
         "era": "2013 - Pres"
@@ -11633,21 +11528,6 @@
         "url": "https://content.sportslogos.net/logos/166/5004/thumbs/500430582006.gif",
         "type": "secondary",
         "era": "2006 - 2020"
-      },
-      {
-        "url": "https://content.sportslogos.net/logos/36/6896/thumbs/689697042022.gif",
-        "type": "secondary",
-        "era": "2022 - Pres"
-      },
-      {
-        "url": "https://content.sportslogos.net/logos/36/6896/thumbs/689654392022.gif",
-        "type": "secondary",
-        "era": "2022 - Pres"
-      },
-      {
-        "url": "https://content.sportslogos.net/logos/36/6896/thumbs/689629882022.gif",
-        "type": "secondary",
-        "era": "2022 - Pres"
       }
     ]
   },
@@ -11658,19 +11538,9 @@
     "league": "Pacific Coast League",
     "logos": [
       {
-        "url": "https://content.sportslogos.net/logos/37/6901/thumbs/690123282023.gif",
-        "type": "secondary",
-        "era": "2023 - Pres"
-      },
-      {
-        "url": "https://content.sportslogos.net/logos/37/6901/thumbs/690133102023.gif",
-        "type": "secondary",
-        "era": "2023 - Pres"
-      },
-      {
-        "url": "https://content.sportslogos.net/logos/37/6901/thumbs/690164782023.gif",
-        "type": "secondary",
-        "era": "2023 - Pres"
+        "url": "https://content.sportslogos.net/logos/37/6901/thumbs/690126552021.gif",
+        "type": "primary",
+        "era": "2022 - Pres"
       }
     ]
   },
@@ -11683,6 +11553,16 @@
       {
         "url": "https://content.sportslogos.net/logos/36/6627/thumbs/662739042019.gif",
         "type": "primary",
+        "era": "2019 - Pres"
+      },
+      {
+        "url": "https://content.sportslogos.net/logos/36/6627/thumbs/662771182019.gif",
+        "type": "secondary",
+        "era": "2019 - Pres"
+      },
+      {
+        "url": "https://content.sportslogos.net/logos/36/6627/thumbs/662776672019.gif",
+        "type": "secondary",
         "era": "2019 - Pres"
       }
     ]
