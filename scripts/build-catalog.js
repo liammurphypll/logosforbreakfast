@@ -108,9 +108,12 @@ const LEAGUES_TO_SCRAPE = [
 // Others (e.g. Arkansas Razorbacks) have both as genuinely separate
 // sections; in that case both count as secondary-tier logos.
 // Everything else (Player Logo Pages, Gear For Sale, Helmets, Wordmark,
-// Uniforms, Anniversary, "* Dark" variants, Throwback, Stadium, Misc) is
-// excluded — dark-mode variants and throwbacks are recolors/reissues of
-// logos already captured elsewhere, not distinct identity marks.
+// Uniforms, Anniversary, "* Dark" variants, Throwback, Stadium, Misc, Cap/
+// Caps/Game-Worn Cap Photos) is excluded — dark-mode variants and
+// throwbacks are recolors/reissues of logos already captured elsewhere,
+// not distinct identity marks; cap sections (common on MLB team pages —
+// "Cap Logos History", "Caps History", "Game-Worn Cap Photos History")
+// are literal baseball-cap merchandise photos/renders, not team logos.
 function classifySection(sectionTitle) {
   const t = sectionTitle.toLowerCase();
   if (!t.includes('logo')) return null; // e.g. "Gear For Sale"
@@ -123,7 +126,8 @@ function classifySection(sectionTitle) {
     t.includes('throwback') ||
     t.includes('misc') ||
     t.includes('stadium') ||
-    t.includes('player')
+    t.includes('player') ||
+    t.includes('cap')
   ) {
     return null;
   }
